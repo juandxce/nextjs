@@ -1,95 +1,91 @@
-import Image from 'next/image'
-import styles from './page.module.css'
+"use client";
+
+import styles from "./page.module.css";
+import TextField from "@mui/material/TextField";
+import Button from "@mui/material/Button";
+import Stack from "@mui/material/Stack";
+import { useState, useEffect } from "react";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
+const handleSubscription = (payload) => {
+  return fetch("http://localhost:3000/api/sms", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  }).then((response) => {
+    return response.json();
+  });
+};
+
+const handleNotification = (payload) => {
+  if (
+    payload.result?.subscribedMessage ||
+    payload.result?.unsubscribedMessage
+  ) {
+    const message =
+      payload.result?.subscribedMessage || payload.result?.unsubscribedMessage;
+    toast.success(message);
+  } else if (payload.result?.alreadySubscribedMessage) {
+    toast.warning(payload.result?.alreadySubscribedMessage);
+  } else if (payload.error) {
+    toast.error(payload.message || payload.error);
+  }
+};
 
 export default function Home() {
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [lastResponse, setLastResponse] = useState();
+  const canUnsubscribe =
+    lastResponse?.result?.alreadySubscribedMessage ||
+    lastResponse?.result?.subscribedMessage;
+  const DiscountCode = lastResponse?.result?.discountCode;
+  const copyDCode = () => {
+    navigator.clipboard.writeText(DiscountCode);
+    toast.success("Code copied to clipboard");
+  }
+
+  const handleSubscribe = async () => {
+    const data = await handleSubscription({ phoneNumber });
+    setLastResponse(data);
+    handleNotification(data);
+  };
+
+  const handleUnsubscribe = async () => {
+    const data = await handleSubscription({ phoneNumber, unsubscribe: true });
+    setLastResponse(data);
+    handleNotification(data);
+  };
+
   return (
     <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>app/page.js</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
-
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://beta.nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore the Next.js 13 playground.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
+      <TextField
+        id="outlined-controlled"
+        label="Phone Number"
+        value={phoneNumber}
+        onChange={(event) => {
+          setPhoneNumber(event.target.value);
+          setLastResponse();
+        }}
+      />
+      <Stack direction="row" spacing={2}>
+        <Button variant="contained" onClick={handleSubscribe}>
+          Subscribe
+        </Button>
+        {canUnsubscribe && (
+          <>
+            <Button variant="outlined" onClick={handleUnsubscribe}>
+              opt-out
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={copyDCode}
+            >
+              Copy code
+            </Button>
+          </>
+        )}
+      </Stack>
+      <ToastContainer />
     </main>
-  )
+  );
 }
